@@ -58,7 +58,7 @@ function FriendsListContent() {
 
   if (loading) return (
     <div className="min-h-screen bg-black flex items-center justify-center text-orange-500 font-black italic tracking-widest uppercase">
-     Dishly ...
+     Nectar ...
     </div>
   );
 

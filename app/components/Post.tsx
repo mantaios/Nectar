@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { auth, db, storage } from "../../firebase";
 import { doc, deleteDoc, updateDoc, arrayUnion, arrayRemove, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -11,7 +11,9 @@ export default function Post({ rev }: any) {
   const [commentText, setCommentText] = useState("");
   const [showAllComments, setShowAllComments] = useState(false);
   const [livePhoto, setLivePhoto] = useState<string | null>(null);
-  const [liveName, setLiveName] = useState<string | null>(null); // NEW STATE FOR LIVE NAME
+  const [liveName, setLiveName] = useState<string | null>(null);
+  const [currentImgIndex, setCurrentImgIndex] = useState(0); // Για τις πολλές φωτό
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   // --- LIKES MODAL STATES ---
   const [showLikesModal, setShowLikesModal] = useState(false);
@@ -49,7 +51,15 @@ export default function Post({ rev }: any) {
     Wait: "Waiting time for food or table."
   };
 
-  // LIVE FETCH FOR PHOTO AND NAME
+  // Ανίχνευση ποια φωτό βλέπει ο χρήστης κατά το scroll
+  const handleScroll = () => {
+    if (scrollRef.current) {
+      const width = scrollRef.current.offsetWidth;
+      const index = Math.round(scrollRef.current.scrollLeft / width);
+      setCurrentImgIndex(index);
+    }
+  };
+
   useEffect(() => {
     const fetchUserData = async () => {
       if (rev.userId) {
@@ -59,7 +69,7 @@ export default function Post({ rev }: any) {
           if (userSnap.exists()) {
             const data = userSnap.data();
             setLivePhoto(data.photoURL);
-            setLiveName(data.displayName); // SET LIVE NAME FROM FIRESTORE
+            setLiveName(data.displayName);
           }
         } catch (err) { console.error(err); }
       }
@@ -209,12 +219,37 @@ export default function Post({ rev }: any) {
 
       {!isEditing ? (
         <div className="relative aspect-square w-full bg-black overflow-hidden" onDoubleClick={handleLike}>
-          <div className="flex h-full overflow-x-auto snap-x snap-mandatory no-scrollbar shadow-inner">
+          {/* PHOTO COUNTER BADGE (e.g. 1/3) */}
+          {rev.imageUrls?.length > 1 && (
+            <div className="absolute top-4 right-4 z-10 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10 text-[10px] font-black tracking-widest">
+              {currentImgIndex + 1}/{rev.imageUrls.length}
+            </div>
+          )}
+
+          <div 
+            ref={scrollRef}
+            onScroll={handleScroll}
+            className="flex h-full overflow-x-auto snap-x snap-mandatory no-scrollbar shadow-inner"
+          >
             {rev.imageUrls?.map((url: string, i: number) => <img key={i} src={url} className="w-full h-full object-cover flex-shrink-0 snap-center" alt="food" />)}
           </div>
+          
           {showHeart && <div className="absolute inset-0 flex items-center justify-center animate-[ping_0.6s_ease-in-out] pointer-events-none text-8xl">❤️</div>}
+
+          {/* INSTAGRAM STYLE DOTS INDICATOR */}
+          {rev.imageUrls?.length > 1 && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+              {rev.imageUrls.map((_: any, i: number) => (
+                <div 
+                  key={i} 
+                  className={`h-1.5 rounded-full transition-all duration-300 ${i === currentImgIndex ? "w-4 bg-orange-500" : "w-1.5 bg-white/30"}`} 
+                />
+              ))}
+            </div>
+          )}
         </div>
       ) : (
+        /* EDIT PHOTO VIEW (as is) */
         <div className="px-5 space-y-4 animate-in fade-in">
           <label className="block w-full h-28 bg-zinc-900 border-2 border-dashed border-zinc-800 rounded-2xl flex items-center justify-center cursor-pointer group">
             <div className="text-center">
@@ -241,6 +276,7 @@ export default function Post({ rev }: any) {
         </div>
       )}
 
+      {/* REST OF THE POST COMPONENT REMAINS THE SAME */}
       <div className="px-6 py-5">
         {isEditing ? (
           <div className="space-y-6 animate-in slide-in-from-top-2">
@@ -287,10 +323,8 @@ export default function Post({ rev }: any) {
             <button onClick={handleUpdate} disabled={isUpdating} className="w-full bg-orange-500 text-black text-[10px] font-black py-4 rounded-2xl uppercase tracking-widest shadow-lg shadow-orange-500/20">{isUpdating ? "UPDATING..." : "SAVE CHANGES"}</button>
           </div>
         ) : (
-          /* VIEW MODE */
           <>
             <div className="flex items-center gap-2 mb-5">
-              {/* BIG LIKE BUTTON */}
               <button onClick={handleLike} className={`text-4xl transition-all active:scale-125 ${isLiked ? "text-red-500 scale-110" : "text-white opacity-60 hover:opacity-100"}`}>{isLiked ? "❤️" : "♡"}</button>
               <div className="flex-1 flex items-center gap-2 justify-end">
                 {rev.category && (
@@ -319,8 +353,7 @@ export default function Post({ rev }: any) {
               {rev.review && <p className="text-[12px] text-zinc-400 font-medium italic leading-relaxed break-words italic">&quot;{rev.review}&quot;</p>}
             </div>
 
-            {/* RATINGS */}
-            <div className="grid grid-cols-2 gap-2 pt-6 border-t border-white/[0.03] relative italic">
+            <div className="grid grid-cols-2 gap-2 pt-6 border-t border-white/[0.03] relative italic select-none">
               {[
                 { label: 'Food', val: rev.ratings?.food },
                 { label: 'Service', val: rev.ratings?.service },
@@ -336,7 +369,7 @@ export default function Post({ rev }: any) {
                     {ratingDescriptions[item.label] || "Experience factor."}
                   </div>
 
-                  <div className="flex items-center justify-between bg-white/[0.03] border border-white/[0.05] rounded-full px-3 h-9 hover:bg-white/[0.08] active:bg-white/10 transition-colors">
+                  <div className="flex items-center justify-between bg-white/[0.03] border border-white/[0.05] rounded-full px-3 h-9 hover:bg-white/[0.08] active:bg-white/10 transition-colors pointer-events-auto">
                     <span className="text-[7px] font-black uppercase text-zinc-500 tracking-widest group-hover:text-orange-500 group-active:text-orange-500 transition-colors">
                       {item.label}
                     </span>
@@ -351,7 +384,7 @@ export default function Post({ rev }: any) {
           </>
         )}
 
-        {/* COMMENTS SECTION */}
+        {/* COMMENTS SECTION (as is) */}
         <div className="space-y-3 border-t border-white/[0.03] pt-5 mt-6">
           {commentsCount > 0 && (
             <button onClick={() => setShowAllComments(!showAllComments)} className="text-[10px] text-zinc-600 font-black uppercase tracking-widest hover:text-orange-500 px-1 transition-colors">

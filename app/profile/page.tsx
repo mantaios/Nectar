@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, Suspense } from "react";
 import { db, auth } from "../../firebase";
-import { collection, query, where, getDocs, doc, getDoc, orderBy, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, getDoc, orderBy, addDoc, serverTimestamp, onSnapshot } from "firebase/firestore";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -36,14 +36,6 @@ function ProfileContent() {
         const userSnap = await getDoc(userRef);
         if (userSnap.exists()) setUserProfile(userSnap.data());
 
-        const qPosts = query(collection(db, "reviews"), where("userId", "==", id), orderBy("date", "desc"));
-        const postsSnap = await getDocs(qPosts);
-        const fetchedPosts = postsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        
-        setPosts(fetchedPosts);
-        setTotalPhotos(fetchedPosts.reduce((acc, post: any) => acc + (post.imageUrls?.length || 0), 0));
-        setTotalSpent(fetchedPosts.reduce((acc, post: any) => acc + (Number(post.amountSpent) || 0), 0));
-
         if (currentUser.uid !== id) {
           const qReq1 = query(collection(db, "friendRequests"), where("fromId", "==", currentUser.uid), where("toId", "==", id));
           const qReq2 = query(collection(db, "friendRequests"), where("fromId", "==", id), where("toId", "==", currentUser.uid));
@@ -62,9 +54,21 @@ function ProfileContent() {
         setFriendsCount(sentSnap.size + receivedSnap.size);
 
       } catch (error) { console.error(error); }
-      setLoading(false);
     };
+    
     fetchProfileData();
+
+    const qPosts = query(collection(db, "reviews"), where("userId", "==", id), orderBy("date", "desc"));
+    
+    const unsubscribe = onSnapshot(qPosts, (snapshot) => {
+      const fetchedPosts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setPosts(fetchedPosts);
+      setTotalPhotos(fetchedPosts.reduce((acc, post: any) => acc + (post.imageUrls?.length || 0), 0));
+      setTotalSpent(fetchedPosts.reduce((acc, post: any) => acc + (Number(post.amountSpent) || 0), 0));
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, [id, currentUser]);
 
   const handleAddFriend = async () => {
@@ -89,7 +93,10 @@ function ProfileContent() {
 
   const isMyProfile = currentUser?.uid === id;
   let filtered = [...posts];
-  if (selectedTag) filtered = filtered.filter((p: any) => p.category === selectedTag);
+  if (selectedTag) {
+    filtered = filtered.filter((p: any) => p.category?.trim() === selectedTag.trim());
+  }
+  
   const displayedPosts = filter === "top" 
     ? [...filtered].sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0)) 
     : filtered;
@@ -101,7 +108,15 @@ function ProfileContent() {
       {/* Header */}
       <nav className="flex items-center justify-between px-6 py-5 sticky top-0 bg-black/80 backdrop-blur-xl z-50 border-b border-white/5">
         <button onClick={() => router.push("/")} className="text-xl text-zinc-400 hover:text-amber-500 transition-colors">←</button>
-        <h2 className="font-black text-[9px] uppercase tracking-[0.4em] text-zinc-500">{userProfile?.userName || "Profile"}</h2>
+        
+        {/* CLICKABLE LOGO SECTION */}
+        <Link href="/" className="flex flex-col items-start active:scale-95 transition-transform">
+            <h1 className="text-2xl font-black italic tracking-tighter text-white select-none">
+                Nectar
+            </h1>
+            <div className="h-[2px] w-6 bg-amber-500 rounded-full mt-[-2px]"></div>
+        </Link>
+
         <div className="w-8"></div>
       </nav>
 
@@ -185,12 +200,10 @@ function ProfileContent() {
             <Link key={post.id} href={`/post/${post.id}`} className="aspect-square bg-zinc-900 overflow-hidden relative group">
               <img src={post.imageUrls?.[0]} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-90 group-hover:opacity-100" alt="post" />
               
-              {/* Discrete Rating Overlay */}
               <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-md text-[8px] text-amber-500 font-black px-1.5 py-0.5 rounded border border-white/10">
                 {post.averageRating?.toFixed(1)}
               </div>
 
-              {/* Ultra-Discrete Money Indicator */}
               {post.amountSpent > 0 && (
                 <div className="absolute top-2 left-2 w-1.5 h-1.5 rounded-full bg-green-500/40 shadow-[0_0_8px_rgba(34,197,94,0.3)]"></div>
               )}
