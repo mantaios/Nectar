@@ -22,7 +22,7 @@ export default function CreatePost() {
   const router = useRouter();
 
   const categories = [
-    "🍔 Burger", "🍕 Pizza", "🥙 Souvlaki", "🥪 Streetfood", "🍣 Sushi", "🍝 Italian", 
+    "🍔 Burger", "🍕 Pizza", "🌯 Souvlaki", "🥪 Streetfood", "🍣 Sushi", "🍝 Italian", 
     "🥩 Steak", "🌮 Tacos", "🍦 Dessert", "☕ Coffee", "🍳 Brunch", "🐟 Seafood", 
     "🍜 Asian", "🥘 Taverna", "🍷 Bar"
   ];

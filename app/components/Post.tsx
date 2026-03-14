@@ -11,6 +11,7 @@ export default function Post({ rev }: any) {
   const [commentText, setCommentText] = useState("");
   const [showAllComments, setShowAllComments] = useState(false);
   const [livePhoto, setLivePhoto] = useState<string | null>(null);
+  const [liveName, setLiveName] = useState<string | null>(null); // NEW STATE FOR LIVE NAME
 
   // --- LIKES MODAL STATES ---
   const [showLikesModal, setShowLikesModal] = useState(false);
@@ -31,14 +32,13 @@ export default function Post({ rev }: any) {
   const [newPreviews, setNewPreviews] = useState<string[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>(rev.imageUrls || []);
 
-  const categories = ["🍔 Burger", "🍕 Pizza", "🥙 Souvlaki", "🥪 Streetfood", "🍣 Sushi", "🍝 Italian", "🥩 Steak", "🌮 Tacos", "🍦 Dessert", "☕ Coffee", "🍳 Brunch", "🐟 Seafood", "🍜 Asian", "🥘 Taverna", "🍷 Bar"];
+  const categories = ["🍔 Burger", "🍕 Pizza", "🌯 Souvlaki", "🥪 Streetfood", "🍣 Sushi", "🍝 Italian", "🥩 Steak", "🌮 Tacos", "🍦 Dessert", "☕ Coffee", "🍳 Brunch", "🐟 Seafood", "🍜 Asian", "🥘 Taverna", "🍷 Bar"];
 
   const postLikes = rev.likes || [];
   const postComments = rev.comments || [];
   const isLiked = postLikes.includes(currentUser?.uid || "");
   const commentsCount = postComments.length;
 
-  // Εξηγήσεις για τα Ratings
   const ratingDescriptions: Record<string, string> = {
     Food: "Quality and taste of the meal.",
     Service: "Staff speed and politeness.",
@@ -49,18 +49,23 @@ export default function Post({ rev }: any) {
     Wait: "Waiting time for food or table."
   };
 
+  // LIVE FETCH FOR PHOTO AND NAME
   useEffect(() => {
-    const fetchUserPhoto = async () => {
-      if (!rev.userPhoto && rev.userId) {
+    const fetchUserData = async () => {
+      if (rev.userId) {
         try {
           const userRef = doc(db, "users", rev.userId);
           const userSnap = await getDoc(userRef);
-          if (userSnap.exists()) setLivePhoto(userSnap.data().photoURL);
+          if (userSnap.exists()) {
+            const data = userSnap.data();
+            setLivePhoto(data.photoURL);
+            setLiveName(data.displayName); // SET LIVE NAME FROM FIRESTORE
+          }
         } catch (err) { console.error(err); }
       }
     };
-    fetchUserPhoto();
-  }, [rev.userId, rev.userPhoto]);
+    fetchUserData();
+  }, [rev.userId]);
 
   const fetchLikedUsers = async () => {
     if (postLikes.length === 0) return;
@@ -185,12 +190,12 @@ export default function Post({ rev }: any) {
         <Link href={`/profile?id=${rev.userId}`} className="flex items-center gap-3 flex-1 group">
           <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-orange-500 to-yellow-400 p-[1.5px] shrink-0">
             <div className="w-full h-full rounded-full bg-black flex items-center justify-center border border-black overflow-hidden shadow-inner">
-              {rev.userPhoto || livePhoto ? <img src={rev.userPhoto || livePhoto} className="w-full h-full object-cover" alt="user" /> : <span className="text-[10px] font-black text-orange-500 uppercase">{rev.userName?.charAt(0)}</span>}
+              {livePhoto || rev.userPhoto ? <img src={livePhoto || rev.userPhoto} className="w-full h-full object-cover" alt="user" /> : <span className="text-[10px] font-black text-orange-500 uppercase">{(liveName || rev.userName)?.charAt(0)}</span>}
             </div>
           </div>
           <div className="flex flex-col min-w-0">
-            <span className="text-[13px] font-black tracking-tight text-zinc-200 group-hover:text-orange-500 transition-colors truncate">@{rev.userName}</span>
-            {rev.location && <span className="text-[10px] font-bold text-zinc-500 tracking-tight truncate flex items-center gap-0.5">📍 {rev.location}</span>}
+            <span className="text-[15px] font-black tracking-tight text-zinc-200 group-hover:text-orange-500 transition-colors truncate">@{liveName || rev.userName}</span>
+            {rev.location && <span className="text-[12px] font-bold text-zinc-500 tracking-tight truncate flex items-center gap-0.5">📍 {rev.location}</span>}
           </div>
         </Link>
         
@@ -285,7 +290,7 @@ export default function Post({ rev }: any) {
           /* VIEW MODE */
           <>
             <div className="flex items-center gap-2 mb-5">
-              {/* BIG LIKE BUTTON - text-4xl */}
+              {/* BIG LIKE BUTTON */}
               <button onClick={handleLike} className={`text-4xl transition-all active:scale-125 ${isLiked ? "text-red-500 scale-110" : "text-white opacity-60 hover:opacity-100"}`}>{isLiked ? "❤️" : "♡"}</button>
               <div className="flex-1 flex items-center gap-2 justify-end">
                 {rev.category && (
@@ -308,13 +313,13 @@ export default function Post({ rev }: any) {
 
             <div className="space-y-1 mb-6 border-l-2 border-orange-500/20 pl-4">
               <p className="text-[13px] leading-snug">
-                <span className="font-black text-zinc-200">@{rev.userName}</span>
+                <span className="font-black text-zinc-200">@{liveName || rev.userName}</span>
                 <span className="font-black italic text-orange-500 uppercase tracking-tighter mx-2">{rev.name}</span>
               </p>
               {rev.review && <p className="text-[12px] text-zinc-400 font-medium italic leading-relaxed break-words italic">&quot;{rev.review}&quot;</p>}
             </div>
 
-            {/* RATINGS WITH HOVER & TAP DESCRIPTION (NEW FUNCTIONALITY) */}
+            {/* RATINGS */}
             <div className="grid grid-cols-2 gap-2 pt-6 border-t border-white/[0.03] relative italic">
               {[
                 { label: 'Food', val: rev.ratings?.food },
@@ -326,8 +331,6 @@ export default function Post({ rev }: any) {
                 { label: 'Wait', val: rev.ratings?.waiting }
               ].map((item) => (
                 <div key={item.label} className="group relative cursor-help active:z-50">
-                  
-                  {/* TOOLTIP POPUP - WORKS ON HOVER (PC) AND TAP (MOBILE) */}
                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block group-active:block w-32 bg-[#1a1a1a] text-[9px] text-zinc-300 p-2 rounded-lg border border-white/10 shadow-2xl z-50 text-center animate-in fade-in zoom-in duration-200 pointer-events-none transition-all">
                     <span className="font-black text-orange-500 block mb-1 uppercase tracking-tighter">{item.label}</span>
                     {ratingDescriptions[item.label] || "Experience factor."}
