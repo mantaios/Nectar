@@ -1,4 +1,4 @@
-import type { Metadata, Viewport } from "next"; // Προσθήκη Viewport
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -12,19 +12,19 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// Ρυθμίσεις για να μην κάνει zoom ο χρήστης και να φαίνεται σαν Native App
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
   themeColor: "#000000",
+  viewportFit: "cover", // ΚΑΝΕΙ ΤΟ APP ΝΑ ΠΙΑΝΕΙ ΟΛΗ ΤΗΝ ΟΘΟΝΗ (NOTCH)
 };
 
 export const metadata: Metadata = {
   title: "Nectar",
   description: "The Digital Sommelier",
-  manifest: "/manifest.json", // Σύνδεση με το αρχείο που φτιάξαμε
+  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -40,8 +40,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* Apple icon για να φαίνεται ωραίο στο iPhone */}
         <link rel="apple-touch-icon" href="/favicon.ico" />
+        {/* ΑΥΤΑ ΤΑ TAGS ΒΟΗΘΟΥΝ ΣΤΟ ΝΑ ΜΗΝ ΔΕΙΧΝΕΙ "OFFLINE COPY" */}
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-black`}
