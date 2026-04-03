@@ -189,7 +189,7 @@ export default function CreatePost() {
         </div>
 
         <div className="space-y-3">
-          <h2 className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-600 ml-1">Money Spent</h2>
+          <h2 className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-600 ml-1">Money Spent (optional)</h2>
           <div className="relative group">
              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-500 font-black">€</span>
              <input type="number" placeholder="0.00" className="w-full bg-zinc-900 border border-white/5 rounded-2xl py-4 pl-10 pr-4 text-xl font-black outline-none focus:border-orange-500 transition-all placeholder:text-zinc-800 shadow-inner" onChange={e => setAmountSpent(e.target.value)} />

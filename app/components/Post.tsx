@@ -155,10 +155,8 @@ export default function Post({ rev }: any) {
   };
 
   return (
-    <div className="relative bg-[#0A0A0A] mb-12 max-w-[420px] mx-auto rounded-[32px] border border-white/[0.05] pb-8 overflow-hidden shadow-2xl font-sans text-white">
-      
-      {/* LIKES MODAL */}
-      {showLikesModal && (
+<div className="relative bg-black mb-12 max-w-[420px] mx-auto rounded-[40px] border border-orange-500/30 pb-0 overflow-hidden shadow-[0_0_40px_rgba(245,158,11,0.1)] font-sans text-white">
+ {showLikesModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 text-white">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setShowLikesModal(false)}></div>
           <div className="relative bg-[#121212] border border-white/10 w-full max-w-[300px] rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95">
